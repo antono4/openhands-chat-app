@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenHands Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-header .avatar {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .chat-header .info h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chat-header .info p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 15px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #f1f0f0;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 15px 20px;
+            background: #f1f0f0;
+            border-radius: 15px;
+            align-self: flex-start;
+            max-width: 80%;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: none;
+            font-family: inherit;
+            max-height: 120px;
+            min-height: 50px;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .welcome-message h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .config-section h3 {
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .config-button {
+            background: #ffc107;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .config-button:hover {
+            background: #e0a800;
+        }
+
+        .status {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="avatar">🤖</div>
+            <div class="info">
+                <h1>OpenHands AI Chat</h1>
+                <p id="status">Online • Ready to help</p>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h2>👋 Selamat Datang!</h2>
+                <p>Tanyakan apa saja atau minta bantuan saya.</p>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Ketik pesan Anda..."
+                    rows="1"
+                ></textarea>
+                <button class="send-button" id="sendButton" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="status" id="connectionStatus">Siap terhubung ke OpenHands API</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'https://app.all-hands.dev/api/v1';
+        
+        // State
+        let conversationId = null;
+        let isLoading = false;
+
+        // DOM Elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const statusEl = document.getElementById('status');
+        const connectionStatusEl = document.getElementById('connectionStatus');
+
+        // Get API key from environment or localStorage
+        function getApiKey() {
+            // First try to get from localStorage (user entered)
+            let apiKey = localStorage.getItem('openhands_api_key');
+            
+            // If not found, try to use the session's API key (if available)
+            if (!apiKey) {
+                apiKey = localStorage.getItem('session_api_key');
+            }
+            
+            return apiKey;
+        }
+
+        // Save API key
+        function saveApiKey(key) {
+            localStorage.setItem('session_api_key', key);
+            connectionStatusEl.textContent = 'API Key tersimpan';
+        }
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send on Enter (Shift+Enter for new line)
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Add message to chat
+        function addMessage(content, type = 'assistant') {
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.innerHTML = content.replace(/\n/g, '<br>');
+            chatMessages.appendChild(message);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return message;
+        }
+
+        // Show typing indicator
+        function showTyping() {
+            const typing = document.createElement('div');
+            typing.className = 'typing-indicator';
+            typing.id = 'typingIndicator';
+            typing.innerHTML = '<span></span><span></span><span></span>';
+            chatMessages.appendChild(typing);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        // Create new conversation
+        async function createConversation() {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                addMessage('⚠️ API Key belum diatur. Silakan masukkan API Key OpenHands Anda di console browser:<br><br><code>localStorage.setItem("session_api_key", "YOUR_API_KEY")</code><br><br>Atau buka DevTools (F12) > Console dan ketik:<br><code>localStorage.setItem("session_api_key", "YOUR_API_KEY")</code>', 'error');
+                return null;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/app-conversations`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: '💬 Chat Web App',
+                        agent_type: 'default'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.app_conversation_id || data.id;
+            } catch (error) {
+                console.error('Create conversation error:', error);
+                addMessage(`❌ Gagal membuat percakapan: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Poll for conversation ready status
+        async function pollConversationReady(startTaskId) {
+            const apiKey = getApiKey();
+            const maxAttempts = 30;
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/app-conversations/start-tasks?ids=${startTaskId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (data[0] && data[0].status === 'READY') {
+                        return data[0].app_conversation_id;
+                    }
+                } catch (error) {
+                    console.error('Poll error:', error);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                attempts++;
+            }
+
+            return null;
+        }
+
+        // Send message to OpenHands
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || isLoading) return;
+
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                addMessage('⚠️ API Key belum diatur. Gunakan localStorage.setItem("session_api_key", "YOUR_KEY") di console.', 'error');
+                return;
+            }
+
+            isLoading = true;
+            sendButton.disabled = true;
+            statusEl.textContent = 'Mengirim...';
+
+            // Add user message
+            addMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // Show typing indicator
+            showTyping();
+
+            try {
+                // If no conversation, create one
+                if (!conversationId) {
+                    statusEl.textContent = 'Membuat percakapan...';
+                    
+                    const createResponse = await fetch(`${API_BASE_URL}/app-conversations`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            title: '💬 Chat Web App',
+                            initial_message: {
+                                role: 'user',
+                                content: [{ type: 'text', text: message }],
+                                run: true
+                            },
+                            agent_type: 'default'
+                        })
+                    });
+
+                    if (!createResponse.ok) {
+                        throw new Error(`HTTP ${createResponse.status}`);
+                    }
+
+                    const createData = await createResponse.json();
+                    const startTaskId = createData.id;
+                    
+                    // Poll for ready status
+                    statusEl.textContent = 'Menunggu agent siap...';
+                    conversationId = await pollConversationReady(startTaskId);
+                    
+                    if (!conversationId) {
+                        // Try to get from response
+                        conversationId = createData.app_conversation_id;
+                    }
+
+                    if (!conversationId) {
+                        throw new Error('Tidak dapat membuat percakapan');
+                    }
+                }
+
+                // Send message to existing conversation
+                statusEl.textContent = 'Agent sedang mengetik...';
+                
+                // Get the agent server URL from the conversation
+                const convResponse = await fetch(`${API_BASE_URL}/app-conversations?ids=${conversationId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+
+                const convData = await convResponse.json();
+                const conversation = convData.items ? convData.items[0] : convData;
+                
+                if (conversation && conversation.conversation_url && conversation.session_api_key) {
+                    const agentServerUrl = conversation.conversation_url.replace('/api/conversations/' + conversationId, '');
+                    const sessionApiKey = conversation.session_api_key;
+
+                    // Send message via agent server
+                    const agentResponse = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Session-API-Key': sessionApiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            role: 'user',
+                            content: [{ type: 'text', text: message }]
+                        })
+                    });
+
+                    if (!agentResponse.ok) {
+                        throw new Error(`HTTP ${agentResponse.status}`);
+                    }
+
+                    // Poll for response
+                    await pollForResponse(conversationId, agentServerUrl, sessionApiKey);
+                } else {
+                    throw new Error('Konfigurasi percakapan tidak valid');
+                }
+
+            } catch (error) {
+                console.error('Send message error:', error);
+                hideTyping();
+                addMessage(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                isLoading = false;
+                sendButton.disabled = false;
+                statusEl.textContent = 'Online • Ready to help';
+            }
+        }
+
+        // Poll for agent response
+        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 60) {
+            let lastEventCount = 0;
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events/search?limit=10&sort_order=TIMESTAMP_DESC`, {
+                        headers: {
+                            'X-Session-API-Key': sessionApiKey
+                        }
+                    });
+
+                    const data = await response.json();
+                    const events = data.items || data;
+                    
+                    if (events.length > lastEventCount) {
+                        // Find new messages from assistant
+                        for (let i = 0; i < events.length; i++) {
+                            const event = events[i];
+                            if (event.source === 'assistant' && event.kind === 'MessageEvent') {
+                                hideTyping();
+                                const content = extractMessageContent(event);
+                                if (content) {
+                                    addMessage(content);
+                                }
+                            }
+                        }
+                        
+                        // Check if agent is still running
+                        const runningEvent = events.find(e => e.kind === 'ConversationStatusEvent' && e.status === 'running');
+                        if (!runningEvent && events.length > lastEventCount) {
+                            // Check for final response
+                            const assistantMessages = events.filter(e => 
+                                e.source === 'assistant' && 
+                                e.kind === 'MessageEvent' && 
+                                extractMessageContent(e)
+                            );
+                            
+                            if (assistantMessages.length === 0) {
+                                addMessage('✓ Agent telah selesai merespons');
+                            }
+                            return;
+                        }
+                        
+                        lastEventCount = events.length;
+                    }
+                } catch (error) {
+                    console.error('Poll response error:', error);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                attempts++;
+            }
+
+            hideTyping();
+            addMessage('⏱️ Agent sedang memproses respons. Silakan tunggu atau kirim pesan lagi.', 'assistant');
+        }
+
+        // Extract message content from event
+        function extractMessageContent(event) {
+            if (!event.message) return null;
+            
+            const message = event.message;
+            if (typeof message === 'string') return message;
+            
+            if (message.content) {
+                if (Array.isArray(message.content)) {
+                    return message.content.map(c => c.text || c.content || '').join('');
+                }
+                return message.content.text || message.content;
+            }
+            
+            return null;
+        }
+
+        // Initialize
+        function init() {
+            connectionStatusEl.textContent = ' Siap • Masukkan API Key di localStorage.setItem("session_api_key", "YOUR_KEY")';
+            
+            // Auto-start greeting after 1 second
+            setTimeout(() => {
+                if (!getApiKey()) {
+                    addMessage('👋 Halo! Saya adalah asisten AI OpenHands.<br><br>⚠️ Untuk memulai, silakan masukkan API Key Anda:<br><br>1. Buka DevTools (F12)<br>2. Pilih tab Console<br>3. Ketik:<br><code>localStorage.setItem("session_api_key", "YOUR_OPENHANDS_API_KEY")</code><br><br>🔑 Anda bisa mendapatkan API Key dari <a href="https://app.all-hands.dev/settings/user" target="_blank">settings page</a>', 'assistant');
+                } else {
+                    addMessage('👋 Halo! Saya adalah asisten AI OpenHands. Ada yang bisa saya bantu hari ini?', 'assistant');
+                }
+            }, 1000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
