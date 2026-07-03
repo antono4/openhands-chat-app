@@ -639,7 +639,7 @@
         // Poll for conversation ready status
         async function pollConversationReady(startTaskId) {
             const apiKey = getApiKey();
-            const maxAttempts = 30;
+            const maxAttempts = 60;
             let attempts = 0;
 
             while (attempts < maxAttempts) {
@@ -658,7 +658,7 @@
                     console.error('Poll error:', error);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 attempts++;
             }
 
@@ -743,14 +743,20 @@
             }
         }
 
-        // Poll for agent response
-        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 90) {
-            let lastEventCount = 0;
+        // Poll for agent response - optimized for speed
+        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 180) {
+            let lastEventId = null;
             let attempts = 0;
+            let consecutiveEmpty = 0;
 
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events/search?limit=20&sort_order=TIMESTAMP_DESC`, {
+                    // Use since_event_id to get only new events
+                    const url = lastEventId 
+                        ? `${agentServerUrl}/api/conversations/${conversationId}/events?since_event_id=${lastEventId}&limit=50`
+                        : `${agentServerUrl}/api/conversations/${conversationId}/events?limit=50`;
+                    
+                    const response = await fetch(url, {
                         headers: {
                             'X-Session-API-Key': sessionApiKey
                         }
@@ -761,12 +767,16 @@
                     }
 
                     const data = await response.json();
-                    const events = data.items || data;
+                    const events = data.items || data || [];
                     
-                    if (events.length > lastEventCount) {
-                        // Find new messages from assistant
-                        for (let i = events.length - 1; i >= 0; i--) {
-                            const event = events[i];
+                    if (events.length > 0) {
+                        consecutiveEmpty = 0;
+                        
+                        // Update last event ID
+                        lastEventId = events[events.length - 1].id;
+                        
+                        // Process events in order
+                        for (const event of events) {
                             if (event.source === 'assistant' && event.kind === 'MessageEvent') {
                                 const content = extractMessageContent(event);
                                 if (content) {
@@ -776,19 +786,27 @@
                             }
                         }
                         
-                        // Check if agent is still running
-                        const runningEvent = events.find(e => e.kind === 'ConversationStatusEvent' && e.status === 'running');
-                        if (!runningEvent) {
-                            return;
+                        // Check if agent is done
+                        const statusEvent = events.find(e => e.kind === 'ConversationStatusEvent');
+                        if (statusEvent) {
+                            if (statusEvent.status === 'finished' || statusEvent.status === 'error') {
+                                return;
+                            }
                         }
                         
-                        lastEventCount = events.length;
+                        // Short polling interval for faster response
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        consecutiveEmpty++;
+                        // Back off slightly if no new events
+                        const delay = Math.min(1000, 500 + consecutiveEmpty * 100);
+                        await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 } catch (error) {
                     console.error('Poll response error:', error);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 3000));
                 attempts++;
             }
 
