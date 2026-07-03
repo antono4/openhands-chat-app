@@ -39,6 +39,12 @@
             padding: 20px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
             gap: 15px;
         }
 
@@ -61,6 +67,31 @@
         .chat-header .info p {
             font-size: 12px;
             opacity: 0.9;
+        }
+
+        .api-key-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-key-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+
+        .api-key-button svg {
+            width: 18px;
+            height: 18px;
         }
 
         .chat-messages {
@@ -103,6 +134,12 @@
             background: #fee;
             color: #c00;
             border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
         .typing-indicator {
@@ -202,41 +239,115 @@
             margin-bottom: 10px;
         }
 
-        .config-section {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 10px;
+        /* API Key Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal h2 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal p {
+            color: #666;
             margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .config-section h3 {
             font-size: 14px;
-            color: #856404;
-            margin-bottom: 10px;
+            line-height: 1.5;
         }
 
-        .config-input {
+        .modal p a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .modal p a:hover {
+            text-decoration: underline;
+        }
+
+        .modal-input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ffc107;
-            border-radius: 5px;
-            font-size: 12px;
-            margin-bottom: 10px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            font-family: monospace;
         }
 
-        .config-button {
-            background: #ffc107;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
+        .modal-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            font-size: 12px;
-            margin-right: 5px;
+            transition: all 0.3s;
+            border: none;
         }
 
-        .config-button:hover {
-            background: #e0a800;
+        .modal-btn.cancel {
+            background: #f1f0f0;
+            color: #666;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-btn.save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-btn.save:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
 
         .status {
@@ -245,23 +356,75 @@
             margin-top: 10px;
         }
 
+        .api-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        .api-status-badge.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .api-status-badge.not-set {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         .hidden {
             display: none !important;
         }
     </style>
 </head>
 <body>
+    <!-- API Key Modal -->
+    <div class="modal-overlay" id="apiKeyModal">
+        <div class="modal">
+            <h2>🔑 API Key</h2>
+            <p>
+                Masukkan OpenHands API Key Anda untuk memulai chat.<br>
+                Dapatkan API Key di <a href="https://app.all-hands.dev/settings/user" target="_blank">sini</a>
+            </p>
+            <input 
+                type="password" 
+                class="modal-input" 
+                id="apiKeyInput" 
+                placeholder="Masukkan API Key Anda..."
+            >
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeModal()">Batal</button>
+                <button class="modal-btn save" onclick="saveApiKey()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-container">
         <div class="chat-header">
-            <div class="avatar">🤖</div>
-            <div class="info">
-                <h1>OpenHands AI Chat</h1>
-                <p id="status">Online • Ready to help</p>
+            <div class="chat-header-left">
+                <div class="avatar">🤖</div>
+                <div class="info">
+                    <h1>OpenHands AI Chat</h1>
+                    <p id="status">
+                        Online
+                        <span class="api-status-badge not-set" id="apiStatusBadge">⚠️ Belum diatur</span>
+                    </p>
+                </div>
             </div>
+            <button class="api-key-button" onclick="openModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+                <span id="apiKeyButtonText">Set API Key</span>
+            </button>
         </div>
 
         <div class="chat-messages" id="chatMessages">
-            <div class="welcome-message">
+            <div class="welcome-message" id="welcomeMessage">
                 <h2>👋 Selamat Datang!</h2>
                 <p>Tanyakan apa saja atau minta bantuan saya.</p>
             </div>
@@ -299,24 +462,73 @@
         const sendButton = document.getElementById('sendButton');
         const statusEl = document.getElementById('status');
         const connectionStatusEl = document.getElementById('connectionStatus');
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiStatusBadge = document.getElementById('apiStatusBadge');
+        const apiKeyButtonText = document.getElementById('apiKeyButtonText');
+        const welcomeMessage = document.getElementById('welcomeMessage');
 
-        // Get API key from environment or localStorage
-        function getApiKey() {
-            // First try to get from localStorage (user entered)
-            let apiKey = localStorage.getItem('openhands_api_key');
-            
-            // If not found, try to use the session's API key (if available)
-            if (!apiKey) {
-                apiKey = localStorage.getItem('session_api_key');
-            }
-            
-            return apiKey;
+        // Modal functions
+        function openModal() {
+            apiKeyModal.classList.add('active');
+            apiKeyInput.value = localStorage.getItem('session_api_key') || '';
+            apiKeyInput.focus();
         }
 
-        // Save API key
-        function saveApiKey(key) {
-            localStorage.setItem('session_api_key', key);
-            connectionStatusEl.textContent = 'API Key tersimpan';
+        function closeModal() {
+            apiKeyModal.classList.remove('active');
+        }
+
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('session_api_key', key);
+                updateApiStatus(true);
+                closeModal();
+                addMessage('✅ API Key berhasil disimpan!', 'success');
+                
+                // Remove welcome message if exists
+                if (welcomeMessage) {
+                    welcomeMessage.remove();
+                }
+                
+                // Add greeting
+                addMessage('👋 Halo! Saya adalah asisten AI OpenHands. Ada yang bisa saya bantu hari ini?', 'assistant');
+            }
+        }
+
+        function updateApiStatus(hasKey) {
+            if (hasKey) {
+                apiStatusBadge.className = 'api-status-badge connected';
+                apiStatusBadge.textContent = '✅ Terhubung';
+                apiKeyButtonText.textContent = 'Update API Key';
+                connectionStatusEl.textContent = 'API Key tersimpan • Siap digunakan';
+            } else {
+                apiStatusBadge.className = 'api-status-badge not-set';
+                apiStatusBadge.textContent = '⚠️ Belum diatur';
+                apiKeyButtonText.textContent = 'Set API Key';
+                connectionStatusEl.textContent = 'API Key belum diatur';
+            }
+        }
+
+        // Close modal on outside click
+        apiKeyModal.addEventListener('click', function(e) {
+            if (e.target === apiKeyModal) {
+                closeModal();
+            }
+        });
+
+        // Save on Enter in modal
+        apiKeyInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveApiKey();
+            }
+        });
+
+        // Get API key from localStorage
+        function getApiKey() {
+            return localStorage.getItem('session_api_key');
         }
 
         // Auto-resize textarea
@@ -335,6 +547,11 @@
 
         // Add message to chat
         function addMessage(content, type = 'assistant') {
+            // Remove welcome message when first real message is added
+            if (welcomeMessage && type !== 'success') {
+                welcomeMessage.remove();
+            }
+            
             const message = document.createElement('div');
             message.className = `message ${type}`;
             message.innerHTML = content.replace(/\n/g, '<br>');
@@ -359,40 +576,6 @@
             if (typing) typing.remove();
         }
 
-        // Create new conversation
-        async function createConversation() {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                addMessage('⚠️ API Key belum diatur. Silakan masukkan API Key OpenHands Anda di console browser:<br><br><code>localStorage.setItem("session_api_key", "YOUR_API_KEY")</code><br><br>Atau buka DevTools (F12) > Console dan ketik:<br><code>localStorage.setItem("session_api_key", "YOUR_API_KEY")</code>', 'error');
-                return null;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/app-conversations`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: '💬 Chat Web App',
-                        agent_type: 'default'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data.app_conversation_id || data.id;
-            } catch (error) {
-                console.error('Create conversation error:', error);
-                addMessage(`❌ Gagal membuat percakapan: ${error.message}`, 'error');
-                return null;
-            }
-        }
-
         // Poll for conversation ready status
         async function pollConversationReady(startTaskId) {
             const apiKey = getApiKey();
@@ -409,7 +592,7 @@
 
                     const data = await response.json();
                     if (data[0] && data[0].status === 'READY') {
-                        return data[0].app_conversation_id;
+                        return data[0];
                     }
                 } catch (error) {
                     console.error('Poll error:', error);
@@ -429,13 +612,14 @@
 
             const apiKey = getApiKey();
             if (!apiKey) {
-                addMessage('⚠️ API Key belum diatur. Gunakan localStorage.setItem("session_api_key", "YOUR_KEY") di console.', 'error');
+                addMessage('⚠️ API Key belum diatur. Klik tombol "Set API Key" di pojok kanan atas untuk memasukkan API Key Anda.', 'error');
+                openModal();
                 return;
             }
 
             isLoading = true;
             sendButton.disabled = true;
-            statusEl.textContent = 'Mengirim...';
+            statusEl.innerHTML = 'Online <span class="api-status-badge connected">⏳ Mengirim...</span>';
 
             // Add user message
             addMessage(message, 'user');
@@ -446,87 +630,47 @@
             showTyping();
 
             try {
-                // If no conversation, create one
-                if (!conversationId) {
-                    statusEl.textContent = 'Membuat percakapan...';
-                    
-                    const createResponse = await fetch(`${API_BASE_URL}/app-conversations`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            title: '💬 Chat Web App',
-                            initial_message: {
-                                role: 'user',
-                                content: [{ type: 'text', text: message }],
-                                run: true
-                            },
-                            agent_type: 'default'
-                        })
-                    });
-
-                    if (!createResponse.ok) {
-                        throw new Error(`HTTP ${createResponse.status}`);
-                    }
-
-                    const createData = await createResponse.json();
-                    const startTaskId = createData.id;
-                    
-                    // Poll for ready status
-                    statusEl.textContent = 'Menunggu agent siap...';
-                    conversationId = await pollConversationReady(startTaskId);
-                    
-                    if (!conversationId) {
-                        // Try to get from response
-                        conversationId = createData.app_conversation_id;
-                    }
-
-                    if (!conversationId) {
-                        throw new Error('Tidak dapat membuat percakapan');
-                    }
-                }
-
-                // Send message to existing conversation
-                statusEl.textContent = 'Agent sedang mengetik...';
+                // Create new conversation
+                statusEl.innerHTML = 'Online <span class="api-status-badge connected">⏳ Membuat percakapan...</span>';
                 
-                // Get the agent server URL from the conversation
-                const convResponse = await fetch(`${API_BASE_URL}/app-conversations?ids=${conversationId}`, {
+                const createResponse = await fetch(`${API_BASE_URL}/app-conversations`, {
+                    method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    }
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: '💬 Chat Web App',
+                        initial_message: {
+                            role: 'user',
+                            content: [{ type: 'text', text: message }],
+                            run: true
+                        },
+                        agent_type: 'default'
+                    })
                 });
 
-                const convData = await convResponse.json();
-                const conversation = convData.items ? convData.items[0] : convData;
-                
-                if (conversation && conversation.conversation_url && conversation.session_api_key) {
-                    const agentServerUrl = conversation.conversation_url.replace('/api/conversations/' + conversationId, '');
-                    const sessionApiKey = conversation.session_api_key;
-
-                    // Send message via agent server
-                    const agentResponse = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Session-API-Key': sessionApiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            role: 'user',
-                            content: [{ type: 'text', text: message }]
-                        })
-                    });
-
-                    if (!agentResponse.ok) {
-                        throw new Error(`HTTP ${agentResponse.status}`);
-                    }
-
-                    // Poll for response
-                    await pollForResponse(conversationId, agentServerUrl, sessionApiKey);
-                } else {
-                    throw new Error('Konfigurasi percakapan tidak valid');
+                if (!createResponse.ok) {
+                    throw new Error(`HTTP ${createResponse.status}: Gagal membuat percakapan`);
                 }
+
+                const createData = await createResponse.json();
+                const startTaskId = createData.id;
+                
+                // Poll for ready status
+                statusEl.innerHTML = 'Online <span class="api-status-badge connected">⏳ Menunggu agent siap...</span>';
+                const readyData = await pollConversationReady(startTaskId);
+                
+                if (!readyData || !readyData.app_conversation_id) {
+                    throw new Error('Tidak dapat membuat percakapan. Silakan coba lagi.');
+                }
+
+                conversationId = readyData.app_conversation_id;
+                const agentServerUrl = readyData.agent_server_url;
+
+                // Poll for response
+                statusEl.innerHTML = 'Online <span class="api-status-badge connected">⏳ Agent sedang berpikir...</span>';
+                await pollForResponse(conversationId, agentServerUrl, readyData.session_api_key);
 
             } catch (error) {
                 console.error('Send message error:', error);
@@ -535,34 +679,38 @@
             } finally {
                 isLoading = false;
                 sendButton.disabled = false;
-                statusEl.textContent = 'Online • Ready to help';
+                statusEl.innerHTML = `Online <span class="api-status-badge connected">✅ Terhubung</span>`;
             }
         }
 
         // Poll for agent response
-        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 60) {
+        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 90) {
             let lastEventCount = 0;
             let attempts = 0;
 
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events/search?limit=10&sort_order=TIMESTAMP_DESC`, {
+                    const response = await fetch(`${agentServerUrl}/api/conversations/${conversationId}/events/search?limit=20&sort_order=TIMESTAMP_DESC`, {
                         headers: {
                             'X-Session-API-Key': sessionApiKey
                         }
                     });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
 
                     const data = await response.json();
                     const events = data.items || data;
                     
                     if (events.length > lastEventCount) {
                         // Find new messages from assistant
-                        for (let i = 0; i < events.length; i++) {
+                        for (let i = events.length - 1; i >= 0; i--) {
                             const event = events[i];
                             if (event.source === 'assistant' && event.kind === 'MessageEvent') {
-                                hideTyping();
                                 const content = extractMessageContent(event);
                                 if (content) {
+                                    hideTyping();
                                     addMessage(content);
                                 }
                             }
@@ -570,17 +718,7 @@
                         
                         // Check if agent is still running
                         const runningEvent = events.find(e => e.kind === 'ConversationStatusEvent' && e.status === 'running');
-                        if (!runningEvent && events.length > lastEventCount) {
-                            // Check for final response
-                            const assistantMessages = events.filter(e => 
-                                e.source === 'assistant' && 
-                                e.kind === 'MessageEvent' && 
-                                extractMessageContent(e)
-                            );
-                            
-                            if (assistantMessages.length === 0) {
-                                addMessage('✓ Agent telah selesai merespons');
-                            }
+                        if (!runningEvent) {
                             return;
                         }
                         
@@ -590,12 +728,12 @@
                     console.error('Poll response error:', error);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 3000));
                 attempts++;
             }
 
             hideTyping();
-            addMessage('⏱️ Agent sedang memproses respons. Silakan tunggu atau kirim pesan lagi.', 'assistant');
+            addMessage('⏱️ Agent sedang memproses respons yang panjang. Silakan tunggu...', 'assistant');
         }
 
         // Extract message content from event
@@ -617,16 +755,14 @@
 
         // Initialize
         function init() {
-            connectionStatusEl.textContent = ' Siap • Masukkan API Key di localStorage.setItem("session_api_key", "YOUR_KEY")';
+            const hasKey = !!getApiKey();
+            updateApiStatus(hasKey);
             
-            // Auto-start greeting after 1 second
-            setTimeout(() => {
-                if (!getApiKey()) {
-                    addMessage('👋 Halo! Saya adalah asisten AI OpenHands.<br><br>⚠️ Untuk memulai, silakan masukkan API Key Anda:<br><br>1. Buka DevTools (F12)<br>2. Pilih tab Console<br>3. Ketik:<br><code>localStorage.setItem("session_api_key", "YOUR_OPENHANDS_API_KEY")</code><br><br>🔑 Anda bisa mendapatkan API Key dari <a href="https://app.all-hands.dev/settings/user" target="_blank">settings page</a>', 'assistant');
-                } else {
-                    addMessage('👋 Halo! Saya adalah asisten AI OpenHands. Ada yang bisa saya bantu hari ini?', 'assistant');
-                }
-            }, 1000);
+            if (hasKey) {
+                addMessage('👋 Halo! Saya adalah asisten AI OpenHands. Ada yang bisa saya bantu hari ini?', 'assistant');
+            } else {
+                addMessage('👋 Halo! Saya adalah asisten AI OpenHands.<br><br>⚠️ Untuk memulai, silakan klik tombol <strong>"Set API Key"</strong> di pojok kanan atas.', 'assistant');
+            }
         }
 
         init();
