@@ -473,6 +473,10 @@
         // State
         let conversationId = null;
         let isLoading = false;
+        let ws = null;
+        let wsReconnectAttempts = 0;
+        let messageBuffer = [];
+        let lastProcessedEventId = null;
 
         // DOM Elements
         const chatMessages = document.getElementById('chatMessages');
@@ -526,6 +530,70 @@
                 apiStatusBadge.textContent = '⚠️ Belum diatur';
                 apiKeyButtonText.textContent = 'Set API Key';
                 connectionStatusEl.textContent = 'API Key belum diatur';
+            }
+        }
+
+        // WebSocket connection for real-time events
+        function connectWebSocket(agentServerUrl, sessionApiKey) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                return ws;
+            }
+
+            try {
+                // Convert HTTP URL to WebSocket URL
+                const wsUrl = agentServerUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+                ws = new WebSocket(`${wsUrl}/api/conversations/${conversationId}/ws`);
+
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    wsReconnectAttempts = 0;
+                    // Send auth
+                    ws.send(JSON.stringify({ type: 'auth', api_key: sessionApiKey }));
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWebSocketMessage(data);
+                    } catch (e) {
+                        console.error('WebSocket parse error:', e);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket closed');
+                    // Reconnect if not intentional close
+                    if (wsReconnectAttempts < 5) {
+                        wsReconnectAttempts++;
+                        setTimeout(() => connectWebSocket(agentServerUrl, sessionApiKey), 1000);
+                    }
+                };
+
+                return ws;
+            } catch (error) {
+                console.error('WebSocket connection error:', error);
+                return null;
+            }
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            if (data.type === 'message' && data.source === 'assistant') {
+                hideTyping();
+                const content = data.message?.content?.[0]?.text || data.message?.text || '';
+                if (content) {
+                    addMessage(content);
+                }
+            } else if (data.type === 'status') {
+                if (data.status === 'running') {
+                    showTyping();
+                } else if (data.status === 'finished' || data.status === 'stopped') {
+                    hideTyping();
+                }
             }
         }
 
@@ -743,18 +811,26 @@
             }
         }
 
-        // Poll for agent response - optimized for speed
-        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 180) {
+        // Ultra-fast polling for response (fallback when WebSocket not available)
+        async function pollForResponse(conversationId, agentServerUrl, sessionApiKey, maxAttempts = 300) {
             let lastEventId = null;
             let attempts = 0;
             let consecutiveEmpty = 0;
+            let wsFallback = false;
+
+            // Try WebSocket first
+            const wsConnected = connectWebSocket(agentServerUrl, sessionApiKey);
+            if (wsConnected) {
+                // Wait a bit for WebSocket to establish
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
 
             while (attempts < maxAttempts) {
                 try {
-                    // Use since_event_id to get only new events
+                    // Use SSE endpoint or fast polling
                     const url = lastEventId 
-                        ? `${agentServerUrl}/api/conversations/${conversationId}/events?since_event_id=${lastEventId}&limit=50`
-                        : `${agentServerUrl}/api/conversations/${conversationId}/events?limit=50`;
+                        ? `${agentServerUrl}/api/conversations/${conversationId}/events?since_event_id=${lastEventId}&limit=100`
+                        : `${agentServerUrl}/api/conversations/${conversationId}/events?limit=100`;
                     
                     const response = await fetch(url, {
                         headers: {
@@ -789,27 +865,29 @@
                         // Check if agent is done
                         const statusEvent = events.find(e => e.kind === 'ConversationStatusEvent');
                         if (statusEvent) {
-                            if (statusEvent.status === 'finished' || statusEvent.status === 'error') {
+                            if (statusEvent.status === 'finished' || statusEvent.status === 'stopped' || statusEvent.status === 'error') {
+                                if (ws) { ws.close(); ws = null; }
                                 return;
                             }
                         }
                         
-                        // Short polling interval for faster response
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                        // Ultra-fast polling: 100ms intervals (10x faster than before)
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     } else {
                         consecutiveEmpty++;
-                        // Back off slightly if no new events
-                        const delay = Math.min(1000, 500 + consecutiveEmpty * 100);
+                        // Slightly back off if no new events, but still keep it fast
+                        const delay = Math.min(300, 100 + consecutiveEmpty * 20);
                         await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 } catch (error) {
                     console.error('Poll response error:', error);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
                 attempts++;
             }
 
+            if (ws) { ws.close(); ws = null; }
             hideTyping();
             addMessage('⏱️ Agent sedang memproses respons yang panjang. Silakan tunggu...', 'assistant');
         }
