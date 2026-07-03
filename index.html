@@ -239,6 +239,24 @@
             margin-bottom: 10px;
         }
 
+        /* Video Container */
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 560px;
+            margin: 10px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .video-container iframe,
+        .video-container video {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            display: block;
+        }
+
         /* API Key Modal */
         .modal-overlay {
             position: fixed;
@@ -554,10 +572,52 @@
             
             const message = document.createElement('div');
             message.className = `message ${type}`;
-            message.innerHTML = content.replace(/\n/g, '<br>');
+            message.innerHTML = processContent(content).replace(/\n/g, '<br>');
             chatMessages.appendChild(message);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             return message;
+        }
+
+        // Process content to embed videos
+        function processContent(content) {
+            // YouTube - auto play
+            const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+            content = content.replace(youtubeRegex, (match, videoId) => {
+                return `<div class="video-container">
+                    <iframe 
+                        src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>`;
+            });
+
+            // Vimeo - auto play
+            const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/g;
+            content = content.replace(vimeoRegex, (match, videoId) => {
+                return `<div class="video-container">
+                    <iframe 
+                        src="https://player.vimeo.com/video/${videoId}?autoplay=1" 
+                        frameborder="0" 
+                        allow="autoplay; fullscreen; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>`;
+            });
+
+            // Direct video files (mp4, webm, etc.)
+            const videoFileRegex = /(?:https?:\/\/[^\s<>"']+\.(?:mp4|webm|ogg|mov)(?:\?[^\s<>"']*)?)/gi;
+            content = content.replace(videoFileRegex, (url) => {
+                return `<div class="video-container">
+                    <video controls autoplay>
+                        <source src="${url}" type="video/${url.split('.').pop().split('?')[0]}">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>`;
+            });
+
+            return content;
         }
 
         // Show typing indicator
