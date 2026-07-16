@@ -1,5 +1,8 @@
 # OpenHands Chat App 💬
 
+> **Created by Antono**
+
+
 ![Chat App Banner](https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=800)
 
 AI-powered chat application powered by OpenHands.
